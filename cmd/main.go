@@ -9,25 +9,29 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/GrooveCommunity/go-dispacher/internal"
 	svc "github.com/GrooveCommunity/go-dispacher/service"
 )
 
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/healthy", handleValidateHealthy).Methods("GET")
-	router.HandleFunc("/forward-tickets", handleForwardTickets).Methods("POST")
 	router.HandleFunc("/validate-forward", handleValidateForward).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Println(os.Getenv("APP_PORT"))
+
+	go internal.ForwardIssue(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT"))
+
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("APP_PORT"), router))
 }
 
 func handleValidateHealthy(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(svc.ValidateHealthy())
 }
 
-func handleForwardTickets(w http.ResponseWriter, r *http.Request) {
+/*func handleForwardTickets(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(svc.ForwardIssue(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT")))
-}
+}*/
 
 func handleValidateForward(w http.ResponseWriter, r *http.Request) {
 	//json.NewEncoder(w).Encode(&svc.ValidateHealthy())

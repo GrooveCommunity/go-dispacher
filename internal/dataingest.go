@@ -1,16 +1,16 @@
 package internal
 
 import (
-	"context"
-	"encoding/json"
-	"log"
-
-	"cloud.google.com/go/storage"
-	"google.golang.org/api/iterator"
+	gcp "github.com/GrooveCommunity/glib-cloud-storage/gcp"
 )
 
 func DataIngest(issues []Issue) {
-	log.Println("Ingestão de dados")
+
+	for _, issue := range issues {
+		gcp.WriteObject(issue, "dispatcher-opencalls", issue.ID)
+	}
+
+	/*log.Println("Ingestão de dados")
 
 	ctx := context.Background()
 
@@ -64,5 +64,5 @@ func DataIngest(issues []Issue) {
 
 			//log.Println(result, err)
 		}
-	}
+	}*/
 }

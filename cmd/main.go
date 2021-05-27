@@ -9,8 +9,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/GrooveCommunity/go-dispacher/internal"
-	svc "github.com/GrooveCommunity/go-dispacher/service"
+	"github.com/GrooveCommunity/go-dispatcher/internal"
+	svc "github.com/GrooveCommunity/go-dispatcher/service"
 )
 
 func main() {

@@ -56,15 +56,41 @@ func ForwardIssue(username, token, endpoint string) Response {
 	var issues []Issue
 
 	for _, v := range issuesJira {
-
 		createdDate, _ := v.Fields.Created.MarshalJSON()
 
 		issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
 	}
 
+	if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+		fmt.Printf("\nError: %v\n", err)
+		return Response{}
+	}
+
 	go DataIngest(issues)
 
 	return Response{Issues: issues}
+
+	/*
+
+		if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+			fmt.Printf("\nError: %v\n", err)
+			return Response{}
+		}
+
+		var issues []Issue
+
+		for _, v := range issuesJira {
+
+			createdDate, _ := v.Fields.Created.MarshalJSON()
+
+			issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
+		}
+
+		go DataIngest(issues)
+
+		return Response{Issues: issues}*/
+
+	return Response{}
 }
 
 func getAllIssues(client *jira.Client, searchString string) ([]jira.Issue, error) {

@@ -4,23 +4,31 @@ import (
 	"fmt"
 	"strings"
 
+	"log"
+
 	"github.com/andygrunwald/go-jira"
+	"github.com/trivago/tgo/tcontainer"
+
+	"github.com/GrooveCommunity/glib-cloud-storage/entity"
+	gcp "github.com/GrooveCommunity/glib-cloud-storage/gcp"
+	"github.com/fatih/structs"
 )
 
-type Rule struct {
+/*type Rule struct {
 	Name    string `json:"name,omitempty"`
 	Field   string `json:"field,omitempty"`
 	Value   string `json:"value,omitempty"`
 	Content string `json:"content,omitempty"`
-}
+}*/
 
 type Issue struct {
-	ID          string `json:"id,omitempty"`
-	Description string `json:"description,omitempty"`
-	Reporter    string `json:"reporter,omitempty"`
-	CreatedDate string `json:"created_date,omitempty"`
-	Type        string `json:"type,omitempty"`
-	Priority    string `json:"priority,omitempty"`
+	ID                 string `json:"id,omitempty"`
+	Description        string `json:"description,omitempty"`
+	Reporter           string `json:"reporter,omitempty"`
+	CreatedDate        string `json:"created_date,omitempty"`
+	Type               string `json:"type,omitempty"`
+	Priority           string `json:"priority,omitempty"`
+	ProductServiceDesk string `json:"priority,omitempty"`
 }
 
 type Response struct {
@@ -28,6 +36,12 @@ type Response struct {
 }
 
 func ForwardIssue(username, token, endpoint string) Response {
+
+	var dataObject entity.DataObject
+
+	gcp.GetObject("forward-dispatcher", "portal_cliente_tef.yml", &dataObject)
+
+	log.Println(dataObject)
 
 	tp := jira.BasicAuthTransport{
 		Username: username, //usuário do jira
@@ -40,7 +54,7 @@ func ForwardIssue(username, token, endpoint string) Response {
 		return Response{}
 	}
 
-	jql := "project = 'service desk' and status = 'AGUARDANDO SD'"
+	jql := "project = 'service desk' and status = 'AGUARDANDO SD' and 'Produtos ServiceDesk' = 'Portal Cliente (TEF)'"
 
 	//rule := Rule{Name: "RulePortalClienteTEFComAnexo"} //Field: "Produtos ServiceDesk", Value: "Portal Cliente (TEF)", Content: "reexportação",
 
@@ -58,6 +72,25 @@ func ForwardIssue(username, token, endpoint string) Response {
 	for _, v := range issuesJira {
 		createdDate, _ := v.Fields.Created.MarshalJSON()
 
+		//log.Println(v.Fields.Unknowns)
+
+		m := structs.Map(v.Fields)
+		unknowns, okay := m["Unknowns"]
+
+		if okay {
+			for key, value := range unknowns.(tcontainer.MarshalMap) {
+				//m[key] = value
+
+				if key == "customfield_10519" {
+					log.Println(value)
+				}
+			}
+		}
+
+		log.Println(m)
+
+		//log.Println(v.Fields.Unknowns)
+
 		issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
 	}
 
@@ -66,7 +99,7 @@ func ForwardIssue(username, token, endpoint string) Response {
 		return Response{}
 	}
 
-	go DataIngest(issues)
+	//go DataIngest(issues)
 
 	return Response{Issues: issues}
 
@@ -120,7 +153,7 @@ func getAllIssues(client *jira.Client, searchString string) ([]jira.Issue, error
 
 }
 
-func getJql(rule Rule, jql string) string {
-	return jql + " ' and " + rule.Field + "' = '" + rule.Field + "' and text ~ '" + rule.Content
-
-}
+/*func getJql(rule Rule, jql string) string {
+	//	return jql + " ' and " + rule.Field + "' = '" + rule.Field + "' and text ~ '" + rule.Content
+	return ""
+}*/

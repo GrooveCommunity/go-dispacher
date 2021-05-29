@@ -1,16 +1,23 @@
 package internal
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+
+	"net/http"
+	"os"
 	"strings"
 
-	"log"
-
 	"github.com/andygrunwald/go-jira"
-	"github.com/trivago/tgo/tcontainer"
+	//	"github.com/trivago/tgo/tcontainer"
+
+	//	"reflect"
+
+	"time"
 
 	gcp "github.com/GrooveCommunity/glib-cloud-storage/gcp"
-	"github.com/fatih/structs"
+	//"github.com/fatih/structs"
 )
 
 /*type Rule struct {
@@ -19,6 +26,18 @@ import (
 	Value   string `json:"value,omitempty"`
 	Content string `json:"content,omitempty"`
 }*/
+
+type Customfield10366 struct {
+	Value string `json:"value"`
+}
+
+type Fields struct {
+	Customfield10366 Customfield10366 `json:"customfield_10366"`
+}
+
+type DataField struct {
+	Fields Fields `json:"fields"`
+}
 
 type Issue struct {
 	ID                 string `json:"id,omitempty"`
@@ -36,91 +55,174 @@ type Response struct {
 
 func ForwardIssue(username, token, endpoint string) Response {
 
-	dataObjects := gcp.GetObjects("forward-dispatcher")
+	for {
 
-	log.Println(dataObjects)
+		fmt.Println("Buscando regras no GCS")
+		dataObjects := gcp.GetObjects("forward-dispatcher")
 
-	tp := jira.BasicAuthTransport{
-		Username: username, //usuário do jira
-		Password: token,    //token de api
-	}
-
-	client, err := jira.NewClient(tp.Client(), strings.TrimSpace(endpoint))
-	if err != nil {
-		fmt.Printf("\nError: %v\n", err)
-		return Response{}
-	}
-
-	jql := "project = 'service desk' and status = 'AGUARDANDO SD' and 'Produtos ServiceDesk' = 'Portal Cliente (TEF)'"
-
-	//rule := Rule{Name: "RulePortalClienteTEFComAnexo"} //Field: "Produtos ServiceDesk", Value: "Portal Cliente (TEF)", Content: "reexportação",
-
-	//jql = getJql(rule, jql)
-
-	issuesJira, err := getAllIssues(client, jql)
-
-	if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
-		fmt.Printf("\nError: %v\n", err)
-		return Response{}
-	}
-
-	var issues []Issue
-
-	for _, v := range issuesJira {
-		createdDate, _ := v.Fields.Created.MarshalJSON()
-
-		//log.Println(v.Fields.Unknowns)
-
-		m := structs.Map(v.Fields)
-		unknowns, okay := m["Unknowns"]
-
-		if okay {
-			for key, value := range unknowns.(tcontainer.MarshalMap) {
-				//m[key] = value
-
-				if key == "customfield_10519" {
-					log.Println(value)
-				}
-			}
+		tp := jira.BasicAuthTransport{
+			Username: username, //usuário do jira
+			Password: token,    //token de api
 		}
 
-		log.Println(m)
-
-		//log.Println(v.Fields.Unknowns)
-
-		issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
-	}
-
-	if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
-		fmt.Printf("\nError: %v\n", err)
-		return Response{}
-	}
-
-	//go DataIngest(issues)
-
-	return Response{Issues: issues}
-
-	/*
-
-		if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+		client, err := jira.NewClient(tp.Client(), strings.TrimSpace(endpoint))
+		if err != nil {
 			fmt.Printf("\nError: %v\n", err)
 			return Response{}
 		}
 
-		var issues []Issue
+		for _, dataObject := range dataObjects {
+			jql := "project = 'service desk' and type = incidente and status = 'AGUARDANDO SD' and '" + dataObject.Forward.Name + "' = '" + dataObject.Forward.Value + "' and text ~ '" +
+				dataObject.Forward.Content + "' and NOT attachments is EMPTY"
 
-		for _, v := range issuesJira {
+			issuesJira, err := getAllIssues(client, jql)
 
-			createdDate, _ := v.Fields.Created.MarshalJSON()
+			if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+				fmt.Printf("\nError: %v\n", err)
+				return Response{}
+			}
 
-			issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
+			//		var issues []Issue
+
+			//			customfield := tcontainer.NewMarshalMap()
+
+			for _, v := range issuesJira {
+
+				updateIssue(v.Key, "customfield_10366", "Squad PayReport")
+
+				//issueService := client.Issue
+
+				//cf, res, _ := issueService.GetCustomFields(v.ID)
+
+				//issueJiraService, resIss, errIss := issueService.Get(v.ID, nil)
+
+				//fmt.Println("GetIssue", issueJiraService, resIss, errIss)
+
+				//m := structs.Map(v.Fields)
+
+				//fmt.Println(v.Fields.Unknowns["customfield_10366"]["id"])
+				//fmt.Println(m)
+
+				//custom_field["customfield_10366"]
+
+				//fmt.Println("Cfs: ", cf, res, errCf)
+
+				//fmt.Println("Unknows: ", v.Fields.Unknowns)
+
+				//var nmap tcontainer.MarshalMap
+				//var p map[string]interface{}
+
+				//nmap := v.Fields.Unknowns //.Value("customfield_10366")
+
+				//nmap, _ := p.(tcontainer.MarshalMap)
+
+				//mm, _ := (nmap.MarshalMap("customfield_10366"))
+				//mmv, _ := mm.Value("value")
+
+				//fmt.Println(reflect.TypeOf(mmv))
+
+				//v.Fields.Unknowns["customfield_10366"] = dataObject.Forward.Squad
+				//issue, _, err := client.Issue.Update(&v)
+
+				/*if err != nil {
+					fmt.Println("Erro na atualização da issue", err.Error())
+
+					panic(err)
+				}
+
+				fmt.Printf("Issue %s encaminhada para o squad %s", issue.ID, dataObject.Forward.Squad)*/
+
+				/*i := jira.Issue{
+
+					Fields: &jira.IssueFields{
+						Unknowns: customfield,
+					},
+				}
+
+				issue, _, err := client.Issue.Update(&i)*/
+
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			//go DataIngest(issuesJira)
+
 		}
 
-		go DataIngest(issues)
+		/*
 
-		return Response{Issues: issues}*/
+			//rule := Rule{Name: "RulePortalClienteTEFComAnexo"} //Field: "Produtos ServiceDesk", Value: "Portal Cliente (TEF)", Content: "reexportação",
 
-	return Response{}
+			//jql = getJql(rule, jql)
+
+			issuesJira, err := getAllIssues(client, jql)
+
+			if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+				fmt.Printf("\nError: %v\n", err)
+				return Response{}
+			}
+
+			var issues []Issue
+
+			for _, v := range issuesJira {
+				createdDate, _ := v.Fields.Created.MarshalJSON()
+
+				//log.Println(v.Fields.Unknowns)
+
+				m := structs.Map(v.Fields)
+				unknowns, okay := m["Unknowns"]
+
+				if okay {
+					for key, value := range unknowns.(tcontainer.MarshalMap) {
+						//m[key] = value
+
+						if key == "customfield_10519" {
+							log.Println(value)
+						}
+					}
+				}
+
+				log.Println(m)
+
+				//log.Println(v.Fields.Unknowns)
+
+				issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
+			}
+
+			if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+				fmt.Printf("\nError: %v\n", err)
+				return Response{}
+			}
+
+			//go DataIngest(issues)
+
+			return Response{Issues: issues}
+
+			/*
+
+				if err != nil && !(strings.HasPrefix(err.Error(), "No response returned")) {
+					fmt.Printf("\nError: %v\n", err)
+					return Response{}
+				}
+
+				var issues []Issue
+
+				for _, v := range issuesJira {
+
+					createdDate, _ := v.Fields.Created.MarshalJSON()
+
+					issues = append(issues, Issue{ID: v.ID, Description: v.Fields.Description, Reporter: v.Fields.Reporter.DisplayName, CreatedDate: string(createdDate), Type: v.Fields.Type.Name, Priority: v.Fields.Priority.Name})
+				}
+
+				go DataIngest(issues)
+
+				return Response{Issues: issues}*/
+
+		fmt.Println("Aguarando um minuto")
+
+		time.Sleep(1 * time.Minute)
+	}
 }
 
 func getAllIssues(client *jira.Client, searchString string) ([]jira.Issue, error) {
@@ -150,7 +252,28 @@ func getAllIssues(client *jira.Client, searchString string) ([]jira.Issue, error
 
 }
 
-/*func getJql(rule Rule, jql string) string {
-	//	return jql + " ' and " + rule.Field + "' = '" + rule.Field + "' and text ~ '" + rule.Content
-	return ""
-}*/
+func updateIssue(keyID, customFieldID, customFieldValue string) {
+	host := os.Getenv("JIRA_ENDPOINT") + "/rest/api/2/issue/" + keyID
+
+	customfield10366 := Customfield10366{Value: customFieldValue}
+	fields := Fields{Customfield10366: customfield10366}
+
+	data := DataField{Fields: fields}
+	jsonReq, err := json.Marshal(data)
+
+	fmt.Println(string(jsonReq))
+
+	req, err := http.NewRequest(http.MethodPut, host, bytes.NewBuffer(jsonReq))
+	req.SetBasicAuth(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"))
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+
+	defer resp.Body.Close()
+
+	if err != nil {
+		panic(err)
+	}
+}

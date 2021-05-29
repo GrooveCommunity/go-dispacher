@@ -9,7 +9,6 @@ import (
 	"github.com/andygrunwald/go-jira"
 	"github.com/trivago/tgo/tcontainer"
 
-	"github.com/GrooveCommunity/glib-cloud-storage/entity"
 	gcp "github.com/GrooveCommunity/glib-cloud-storage/gcp"
 	"github.com/fatih/structs"
 )
@@ -37,11 +36,9 @@ type Response struct {
 
 func ForwardIssue(username, token, endpoint string) Response {
 
-	var dataObject entity.DataObject
+	dataObjects := gcp.GetObjects("forward-dispatcher")
 
-	gcp.GetObject("forward-dispatcher", "portal_cliente_tef.yml", &dataObject)
-
-	log.Println(dataObject)
+	log.Println(dataObjects)
 
 	tp := jira.BasicAuthTransport{
 		Username: username, //usuário do jira

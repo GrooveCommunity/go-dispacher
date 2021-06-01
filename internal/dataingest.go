@@ -1,68 +1,35 @@
 package internal
 
 import (
+	"log"
+
+	"encoding/json"
+
 	gcp "github.com/GrooveCommunity/glib-cloud-storage/gcp"
+	"github.com/GrooveCommunity/go-dispatcher/entity"
 )
 
-func DataIngest(issues []Issue) {
+func WriteRule(rule entity.Rule) {
+	gcp.WriteObject(rule, "forward-dispatcher", rule.Name)
+}
 
-	for _, issue := range issues {
-		gcp.WriteObject(issue, "dispatcher-opencalls", issue.ID)
-	}
+func GetRules() []entity.Rule {
+	var rules []entity.Rule
 
-	/*log.Println("Ingestão de dados")
+	dataObjects := gcp.GetObjects("forward-dispatcher")
 
-	ctx := context.Background()
+	for _, b := range dataObjects {
+		var rule entity.Rule
+		errUnmarsh := json.Unmarshal(b, &rule)
 
-	client, err := storage.NewClient(ctx)
-
-	defer client.Close()
-
-	if err != nil {
-		panic(err.Error())
-	}
-
-	bkt := client.Bucket("dispatcher-opencalls")
-
-	query := &storage.Query{Prefix: ""}
-
-	var names []string
-	it := bkt.Objects(ctx, query)
-
-	for {
-		attrs, err := it.Next()
-		if err == iterator.Done {
-			break
+		if errUnmarsh != nil {
+			log.Fatal("Erro no unmarshal\n", errUnmarsh.Error())
 		}
 
-		if err != nil {
-			panic(err.Error())
-		}
-
-		names = append(names, attrs.Name)
+		rules = append(rules, rule)
 	}
 
-	for _, issue := range issues {
-		if len(names) == 0 {
-			obj := bkt.Object(issue.ID)
-			w := obj.NewWriter(ctx)
+	log.Println(rules)
 
-			b, errJson := json.Marshal(issue)
-
-			if errJson != nil {
-				panic(errJson)
-			}
-
-			result, errorWriter := w.Write(b)
-
-			log.Println(result)
-			log.Println(errorWriter)
-
-			if errCloseWriter := w.Close(); errCloseWriter != nil {
-				panic(errCloseWriter)
-			}
-
-			//log.Println(result, err)
-		}
-	}*/
+	return rules
 }

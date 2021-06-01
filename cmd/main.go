@@ -5,34 +5,44 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/GrooveCommunity/go-dispatcher/entity"
+
 	"os"
 
 	"github.com/gorilla/mux"
 
 	"github.com/GrooveCommunity/go-dispatcher/internal"
-	svc "github.com/GrooveCommunity/go-dispatcher/service"
 )
+
+var rules []entity.Rule
 
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/healthy", handleValidateHealthy).Methods("GET")
-	//router.HandleFunc("/validate-forward", handleValidateForward).Methods("POST")
+	router.HandleFunc("/put-rule", handlePutRule).Methods("POST")
 
 	log.Println(os.Getenv("APP_PORT"))
 
-	go internal.ForwardIssue(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT"))
+	rules = internal.GetRules()
+
+	go internal.ForwardIssue(rules, os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT"))
 
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("APP_PORT"), router))
 }
 
 func handleValidateHealthy(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(svc.ValidateHealthy())
+	json.NewEncoder(w).Encode(entity.Healthy{Status: "Success!"})
 }
 
-/*func handleForwardTickets(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(svc.ForwardIssue(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT")))
-}*/
+func handlePutRule(w http.ResponseWriter, r *http.Request) {
+	var rule entity.Rule
 
-/*func handleValidateForward(w http.ResponseWriter, r *http.Request) {
-	//json.NewEncoder(w).Encode(&svc.ValidateHealthy())
-}*/
+	err := json.NewDecoder(r.Body).Decode(&rule)
+	if err != nil {
+		panic(err)
+	}
+
+	internal.WriteRule(rule)
+
+	rules = append(rules, rule)
+}

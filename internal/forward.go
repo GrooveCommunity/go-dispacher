@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 
 	"net/http"
@@ -72,7 +71,10 @@ func ForwardIssue(rules []entity.Rule, username, token, endpoint string) {
 
 				for _, v := range issuesJira {
 
-					updateIssue(entity.Issue{KeyID: v.Key, Rule: rule})
+					updateStatusIssue(&v, client, "Analisar - SD")
+					updateStatusIssue(&v, client, "Acionar Squad")
+
+					updateIssueCustomField(entity.Issue{KeyID: v.Key, Rule: rule})
 
 					if err != nil {
 						panic(err)
@@ -115,18 +117,39 @@ func getAllIssues(client *jira.Client, searchString string) ([]jira.Issue, error
 
 }
 
-func updateIssue(issue entity.Issue) {
-	host := os.Getenv("JIRA_ENDPOINT") + "/rest/api/2/issue/" + issue.KeyID
+func updateStatusIssue(issue *jira.Issue, client *jira.Client, status string) {
+	fmt.Println("Issue ID:" + issue.ID)
 
-	data := "{\"fields\": {" + issue.Rule.Forward.Output.CustomFieldID + ":{\"value\":" + issue.Rule.Forward.Output.CustomFieldValue + "}}"
-
-	jsonReq, err := json.Marshal(data)
+	var transitionID string
+	possibleTransitions, _, err := client.Issue.GetTransitions(issue.ID)
 
 	if err != nil {
-		panic(err)
+		panic("\nError:" + err.Error())
 	}
 
-	req, err := http.NewRequest(http.MethodPut, host, bytes.NewBuffer(jsonReq))
+	for _, transitions := range possibleTransitions {
+		if transitions.Name == status {
+			transitionID = transitions.ID
+			break
+		}
+	}
+
+	_, errorTransition := client.Issue.DoTransition(issue.ID, transitionID)
+
+	if errorTransition != nil {
+		panic("\nError:" + errorTransition.Error())
+	}
+
+	fmt.Println("Status atualizado para " + status)
+
+}
+
+func updateIssueCustomField(issue entity.Issue) {
+	host := os.Getenv("JIRA_ENDPOINT") + "/rest/api/2/issue/" + issue.KeyID
+
+	data := "{\"fields\": {\"" + issue.Rule.Forward.Output.CustomFieldID + "\":{\"value\":\"" + issue.Rule.Forward.Output.CustomFieldValue + "\"}}}"
+
+	req, err := http.NewRequest(http.MethodPut, host, bytes.NewBuffer([]byte(data)))
 	req.SetBasicAuth(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"))
 	req.Header.Set("Content-Type", "application/json")
 

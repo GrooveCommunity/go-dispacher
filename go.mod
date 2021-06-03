@@ -8,4 +8,5 @@ require (
 	github.com/gorilla/mux v1.8.0
 )
 
-replace github.com/GrooveCommunity/glib-cloud-storage v0.0.0 => /home/eduardodicarte/go/src/github.com/GrooveCommunity/glib-cloud-storage
+replace github.com/GrooveCommunity/glib-cloud-storage v0.0.0 => /go/src/github.com/GrooveCommunity/glib-cloud-storage
+

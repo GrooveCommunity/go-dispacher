@@ -43,25 +43,37 @@ type Response struct {
 	Issues []Issue `json:"issues,omitempty"`
 }
 
-func ForwardIssue(rules []entity.Rule, username, token, endpoint string) {
+var rules []entity.Rule
+
+func ForwardIssue(username, token, endpoint string) {
+
+	rules = GetRules()
+
+	tp := jira.BasicAuthTransport{
+		Username: username, //usuário do jira
+		Password: token,    //token de api
+	}
+
+	client, err := jira.NewClient(tp.Client(), strings.TrimSpace(endpoint))
+	if err != nil {
+		panic("\nError:" + err.Error())
+	}
 
 	for {
 
-		tp := jira.BasicAuthTransport{
-			Username: username, //usuário do jira
-			Password: token,    //token de api
-		}
-
-		client, err := jira.NewClient(tp.Client(), strings.TrimSpace(endpoint))
-		if err != nil {
-			panic("\nError:" + err.Error())
-		}
+		fmt.Println("Regras consideradas: ", rules)
 
 		for _, rule := range rules {
 
 			for _, field := range rule.Forward.Input.Fields {
-				jql := "project = 'service desk' and type = incidente and status = 'AGUARDANDO SD' and '" + field.Name + "' = '" + field.Value + "' and text ~ '" +
-					rule.Forward.Input.Content + "' and NOT attachments is EMPTY"
+
+				content := ""
+
+				if rule.Forward.Input.Content != "" {
+					content = " and text ~ '" + rule.Forward.Input.Content + "'"
+				}
+
+				jql := "project = 'service desk' and type = incidente and status = 'AGUARDANDO SD' and '" + field.Name + "' = '" + field.Value + "'" + content + " and NOT attachments is EMPTY"
 
 				issuesJira, err := getAllIssues(client, jql)
 
@@ -88,6 +100,10 @@ func ForwardIssue(rules []entity.Rule, username, token, endpoint string) {
 
 		time.Sleep(1 * time.Minute)
 	}
+}
+
+func UpdateRules(rule entity.Rule) {
+	rules = append(rules, rule)
 }
 
 func getAllIssues(client *jira.Client, searchString string) ([]jira.Issue, error) {

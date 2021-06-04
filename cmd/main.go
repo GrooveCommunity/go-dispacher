@@ -43,6 +43,8 @@ func handlePutRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	internal.WriteRule(rule)
+	
+	log.Println("Regra escrita", rule)
 
 	rules = append(rules, rule)
 }

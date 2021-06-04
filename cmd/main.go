@@ -14,18 +14,14 @@ import (
 	"github.com/GrooveCommunity/go-dispatcher/internal"
 )
 
-var rules []entity.Rule
-
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/healthy", handleValidateHealthy).Methods("GET")
 	router.HandleFunc("/put-rule", handlePutRule).Methods("POST")
 
-	log.Println(os.Getenv("APP_PORT"))
+	log.Println("Port: ", os.Getenv("APP_PORT"))
 
-	rules = internal.GetRules()
-
-	go internal.ForwardIssue(rules, os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT"))
+	go internal.ForwardIssue(os.Getenv("JIRA_USERNAME"), os.Getenv("JIRA_TOKENAPI"), os.Getenv("JIRA_ENDPOINT"))
 
 	log.Fatal(http.ListenAndServe(":"+os.Getenv("APP_PORT"), router))
 }
@@ -43,6 +39,4 @@ func handlePutRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	internal.WriteRule(rule)
-
-	rules = append(rules, rule)
 }

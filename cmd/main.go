@@ -34,6 +34,10 @@ func handleValidateHealthy(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(entity.Healthy{Status: "Success!"})
 }
 
+func GetRules()[]entity.Rule {
+     return rules	
+}
+
 func handlePutRule(w http.ResponseWriter, r *http.Request) {
 	var rule entity.Rule
 

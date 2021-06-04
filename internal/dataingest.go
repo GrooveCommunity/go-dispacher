@@ -10,7 +10,8 @@ import (
 )
 
 func WriteRule(rule entity.Rule) {
-	gcp.WriteObject(rule, "forward-dispatcher", rule.Name)
+	gcp.WriteObject(rule, "rules-dispatcher", rule.Name)
+
 	//Atualiza a estrutura de rules
 	UpdateRules(rule)
 }
@@ -18,7 +19,7 @@ func WriteRule(rule entity.Rule) {
 func GetRules() []entity.Rule {
 	var rules []entity.Rule
 
-	dataObjects := gcp.GetObjects("forward-dispatcher")
+	dataObjects := gcp.GetObjects("rules-dispatcher")
 
 	for _, b := range dataObjects {
 		var rule entity.Rule

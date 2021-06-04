@@ -6,8 +6,9 @@ type Field struct {
 }
 
 type ForwardInput struct {
-	Fields  []Field
-	Content string
+	Fields        []Field
+	HasAttachment bool `json:"has_attachment"`
+	Content       string
 }
 
 type ForwardOutput struct {

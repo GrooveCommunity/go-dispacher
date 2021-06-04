@@ -68,12 +68,17 @@ func ForwardIssue(username, token, endpoint string) {
 			for _, field := range rule.Forward.Input.Fields {
 
 				content := ""
+				attachment := ""
 
 				if rule.Forward.Input.Content != "" {
 					content = " and text ~ '" + rule.Forward.Input.Content + "'"
 				}
 
-				jql := "project = 'service desk' and type = incidente and status = 'AGUARDANDO SD' and '" + field.Name + "' = '" + field.Value + "'" + content + " and NOT attachments is EMPTY"
+				if rule.Forward.Input.HasAttachment {
+					attachment = "and NOT attachments is EMPTY"
+				}
+
+				jql := "project = 'service desk' and type = incidente and status = 'AGUARDANDO SD' and '" + field.Name + "' = '" + field.Value + "'" + content + " " + attachment
 
 				issuesJira, err := getAllIssues(client, jql)
 

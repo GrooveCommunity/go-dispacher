@@ -17,8 +17,8 @@ import (
 func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", handleHealthy).Methods("GET")
-	router.HandleFunc("/healthy", handleValidateHealthy).Methods("GET")
-	router.HandleFunc("/put-rule", handlePutRule).Methods("POST")
+	router.HandleFunc("/dispatcher/healthy", handleValidateHealthy).Methods("GET")
+	router.HandleFunc("/dispatcher/put-rule", handlePutRule).Methods("POST")
 
 	log.Println("Port: ", os.Getenv("APP_PORT"))
 
